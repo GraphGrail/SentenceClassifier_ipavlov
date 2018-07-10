@@ -21,9 +21,8 @@ log = get_logger(__name__)
 
 @register('text_normalizer')
 class TextCorrector(Component, Serializable):
-    def __init__(self, **kwargs):
-        self.tn = TextNormalizer().fit()
-        self.mode=kwargs['mode']
+    def __init__(self, norm_method = 'lemmatize', **kwargs):
+        self.tn = TextNormalizer(norm_method = norm_method).fit()
         #super().__init__(**kwargs)
 
     def save(self, *args, **kwargs):

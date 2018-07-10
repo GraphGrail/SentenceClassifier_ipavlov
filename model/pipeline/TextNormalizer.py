@@ -10,10 +10,14 @@ from sklearn.base import BaseEstimator
 import pymystem3
 from nltk.tokenize import TreebankWordTokenizer
 import re
+from nltk.stem.snowball import SnowballStemmer
+
 class TextNormalizer(BaseEstimator,TransformerMixin):
-    def __init__(self, vocab_filename = None):
+    def __init__(self, norm_method = 'stem', vocab_filename = None):
         self.__tokenizer = TreebankWordTokenizer()
         self.__mystem = pymystem3.Mystem()
+        self.__norm_method = norm_method
+        self.__stemmer = SnowballStemmer('russian')
         
     
     def __clean_comment(self, text):
@@ -21,7 +25,12 @@ class TextNormalizer(BaseEstimator,TransformerMixin):
         if len(text)>0:
             text = re.sub('\W|\d',' ',text).lower()
             tokens = self.__tokenizer.tokenize(text)
-            tokens = [self.__mystem.lemmatize(t)[0] for t in tokens]
+            if self.__norm_method == 'lemmatize':
+                tokens = [self.__mystem.lemmatize(t)[0] for t in tokens]
+            elif self.__norm_method == 'stem':
+                tokens = [self.__stemmer.stem(t)[0] for t in tokens]
+            elif self.__norm_method == 'none':
+                tokens = [t for t in tokens]
             return ' '.join(tokens)
     
     def transform(self, X, y=None, **fit_params):

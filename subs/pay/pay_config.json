@@ -43,7 +43,9 @@
         "out": [
           "xv"
         ],
-        "load_path":"ft_compressed.pkl"
+        "load_path":[
+            "subs/pay/ft_compressed.pkl"
+        ]
       },
 
       {
@@ -94,8 +96,8 @@
             "coef_reg_den":1e-4,
             "dense_size":20
         },
-        "save_path":"cnn_weights.hdf5",
-        "load_path":"cnn_weights.hdf5"
+        "save_path":"subs/pay/cnn_weights.hdf5",
+        "load_path":"subs/pay/cnn_weights.hdf5"
         
       }
     ],
