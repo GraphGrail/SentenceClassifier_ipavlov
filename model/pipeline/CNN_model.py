@@ -21,47 +21,70 @@ from keras.models import Sequential
 from keras.utils import to_categorical
 from keras.layers.core import Dropout
 from keras.layers.wrappers import Bidirectional
+from keras.models import Model
+from keras.layers import Input, Dense, Embedding,Concatenate
 from deeppavlov.models.classifiers.intents.utils import labels2onehot, log_metrics, proba2labels
 from deeppavlov.core.common.log import get_logger
 import numpy as np
 import pickle
+from keras import regularizers
 
 log = get_logger(__name__)
 
 @register('cnn_model')
 class CNN_classifier(KerasModel):
     
-    def __init__(self, opt: Dict, **kwargs):
-        self.opt = {}
-        self.confident_threshold = 0.5
-        self.classes = pickle.load(open(opt['classes'],'rb'))
-        self.save_path = kwargs['save_path']
-        self.load_path = kwargs['load_path']
-        self.in_y = kwargs['in_y']
-        #self.classes = pickle.load(open(opt["classes"],'rb'))
-        super().__init__(**kwargs)
-        changeable_params = {
-                     "metrics": ["categorical_accuracy"],
-                     "optimizer": "Adam",
-                     "loss": "categorical_crossentropy",
-                     "dropout_power": 0.5,
-                     "epochs": 250,
-                     "batch_size": 64,
-                     "val_every_n_epochs": 1,
-                     "verbose": True,
-                     "val_patience": 10,
-                     "pooling_size":1}
-        # Reinitializing of parameters
-        for param in changeable_params.keys():
-            if param in opt.keys():
-                self.opt[param] = opt[param]
+    def __init__(self, 
+                 save_path,
+                 load_path,
+                 architecture_name: str,
+                 architecture_params: Dict,
+                 loss: str = 'categorical_crossentropy', 
+                 metrics:str = 'categorical_accuracy', 
+                 optimizer: str = 'adam',
+                 confident_threshold = 0.5,
+                 classes = 'class_names.pkl',
+                 **kwargs):
+        opt = {}
+        self.confident_threshold = confident_threshold
+        self.classes = pickle.load(open(classes,'rb'))
+        self.n_classes = len(self.classes)
+        self.save_path = save_path
+        self.load_path = load_path
+        architectures = {
+                'cnn':self.cnn_model,
+                'dual_bilstm_cnn_model':self.dual_bilstm_cnn_model
+                }
+        if architecture_name == 'cnn':
+            params_list = [
+                    'cnn_layers',
+                    'emb_dim',
+                    'seq_len',
+                    'pool_size',
+                    'dropout_power',
+                    ]
+        elif architecture_name == 'dual_bilstm_cnn_model':
+            params_list = [
+                    'bilstm_layers',
+                    'conv_layers',
+                    'emb_dim',
+                    'seq_len',
+                    'pool_size',
+                    'dropout_power'
+                    ]
+        else:
+            raise NotImplementedError()
+        for param in params_list:
+            if param in architecture_params:
+                opt[param] = architecture_params[param]
             else:
-                self.opt[param] = changeable_params[param]
-        self.model = self.cnn_model(opt)
-        #self.model = self.bilstm_cnn_model(kwargs['params'])
-        self.model.compile(optimizer = self.opt['optimizer'],
-                           metrics = self.opt['metrics'],
-                           loss = self.opt['loss'],
+                raise NameError()
+                
+        model_builder = architectures[architecture_name]
+        self.model = model_builder(opt)
+        self.model.compile(optimizer = optimizer,
+                           metrics = metrics,
+                           loss = loss,
                            )
         if kwargs['mode']=='infer':
             self.load()
@@ -79,7 +102,7 @@ class CNN_classifier(KerasModel):
                 vector of probabilities to belong with each class
                 or list of labels sentence belongs with
         """
-        preds = np.array(self.infer_on_batch(data))
+        preds = np.vstack([self.infer_on_batch(d) for d in data])
 
         if predict_proba:
             return preds
@@ -97,11 +120,11 @@ class CNN_classifier(KerasModel):
                 fn = np.vstack([fn,noised])
                 ln = np.vstack([ln,labels])
             return fn,ln
-        
-        vectors = np.array(xa)
+        feats = list(map(list, zip(*list(xa))))
         labels = labels2onehot(np.array(ya), classes = self.classes)
-        va, la = add_noise(vectors, labels, 10)
-        metrics_values = self.model.train_on_batch(va,la)
+        #va, la = add_noise(vectors, labels, 10)
+        netin = [np.vstack(f) for f in feats]
+        metrics_values = self.model.train_on_batch(netin,labels)
         return metrics_values
     
     
@@ -119,9 +142,8 @@ class CNN_classifier(KerasModel):
         cnn_layers = opt['cnn_layers']
         emb_dim = opt['emb_dim']
         seq_len = opt['seq_len']
-        pool_size = opt['pooling_size']
+        pool_size = opt['pool_size']
         dropout_power = opt['dropout_power']
-        n_classes = opt['n_classes']
 
         model = Sequential()
         model.add(Conv1D(filters = cnn_layers[0]['filters'],
@@ -135,44 +157,62 @@ class CNN_classifier(KerasModel):
         model.add(MaxPooling1D(pool_size))
         model.add(Flatten())
         model.add(Dropout(dropout_power))
-        model.add(Dense(n_classes, activation='softmax'))
+        model.add(Dense(self.n_classes, activation='softmax'))
         
         return model
+    def dual_bilstm_cnn_model(self, opt):
+        bilstm_layers = opt['bilstm_layers']
+        conv_layers = opt['conv_layers']
+        emb_dim = opt['emb_dim']
+        seq_len = opt['seq_len']
+        pool_size = opt['pool_size']
+        dropout_power = opt['dropout_power']
+        #Left wing
+        li0 = Input(shape = (seq_len,emb_dim))
+        lr = li0
+        for bilstm_layer in bilstm_layers:
+            lr = Bidirectional(layer=LSTM(units=bilstm_layer['units'],
+                                          activation=bilstm_layer['activation'],
+                                          kernel_regularizer=regularizers.l2(bilstm_layer['l2_power']),
+                                          return_sequences=True))(lr)
+        lconv = lr
+        for conv_layer in conv_layers:
+            lconv = Conv1D(filters = conv_layer['units'],
+                          kernel_size = conv_layer['kernel_size'],
+                          activation=conv_layer['activation'],
+                          kernel_regularizer=regularizers.l2(conv_layer['l2_power']),
+                          kernel_initializer='he_normal')(lconv)
+        lbn = BatchNormalization()(lconv)
+        lmp = MaxPooling1D(pool_size)(lbn)
+        lf  = Flatten()(lmp)
+        ldr = Dropout(dropout_power)(lf)
+        
+        #Right wing
+        ri0 = Input(shape = (seq_len,emb_dim))
+        rr = ri0
+        for bilstm_layer in bilstm_layers:
+            rr = Bidirectional(layer=LSTM(units=bilstm_layer['units'],
+                                          activation=bilstm_layer['activation'],
+                                          kernel_regularizer=regularizers.l2(bilstm_layer['l2_power']),
+                                          return_sequences=True))(rr)
+        rconv = rr
+        for conv_layer in conv_layers:
+            rconv = Conv1D(filters = conv_layer['units'],
+                          kernel_size = conv_layer['kernel_size'],
+                          activation=conv_layer['activation'],
+                          kernel_regularizer=regularizers.l2(conv_layer['l2_power']),
+                          kernel_initializer='he_normal')(rconv)
+        rbn = BatchNormalization()(rconv)
+        rmp = MaxPooling1D(pool_size)(rbn)
+        rf  = Flatten()(rmp)
+        rdr = Dropout(dropout_power)(rf)
 
-    def bilstm_cnn_model(self, params):
-        """
-        Build un-compiled BiLSTM-CNN
-        Args:
-            params: dictionary of parameters for NN
-    
-        Returns:
-            Un-compiled model
-        """
-        model = Sequential()
-        model.add(Bidirectional(LSTM(params['units_lstm'], activation='tanh',
-                                    return_sequences=True,
-                                    kernel_regularizer=l2(params['coef_reg_lstm']),
-                                    dropout=params['dropout_rate'],
-                                    recurrent_dropout=params['rec_dropout_rate']),
-                input_shape = (params['text_size'], params['embedding_size'])))
-        for i in range(len(params['kernel_sizes_cnn'])):
-            model.add(Conv1D(params['filters_cnn'][i],
-                              kernel_size=params['kernel_sizes_cnn'][i],
-                              activation=None,
-                              kernel_regularizer=l2(params['coef_reg_cnn']),
-                              padding='same'))
-            model.add(BatchNormalization())
-            model.add(Activation('relu'))
-        model.add(MaxPooling1D(4))
-        model.add(Flatten())
-        #model.add(Flatten())
-        model.add(Dropout(params['dropout_rate']))
-        model.add(Dense(params['dense_size'], activation=None,
-                       kernel_regularizer=l2(params['coef_reg_den'])))
-        model.add(Activation('sigmoid'))
-        return model
-    
-    
+        un = Concatenate()([ldr,rdr])
+        out = Dense(self.n_classes,activation='softmax')(un)
+        
+        net = Model(inputs=[li0,ri0], outputs=out)
+        
+        return net
     def load(self):
         self.model.load_weights(self.load_path)
     def save(self):

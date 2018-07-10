@@ -57,10 +57,11 @@
         "out": [
           "y_pred"
         ],
+        "architecture_name":"cnn",
         "loss": "categorical_crossentropy",
         "metrics": "classification_accuracy",
         "optimizer": "adam",
-        "opt": {
+        "architecture_params": {
           "cnn_layers": [
             {
               "filters": 1024,

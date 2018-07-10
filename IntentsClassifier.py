@@ -44,7 +44,7 @@ class IntentsClassifier():
             'confidence': np.max(res)
                }
     
-    def train(path_to_config):
+    def train(self, path_to_config):
         pass
     
     def run(self,message):
@@ -63,11 +63,11 @@ class IntentsClassifier():
     
 if __name__ == '__main__':
     sub_configs = {
-            'оплата':'subs/pay/pay_config.json',
-            'доставка': 'subs/deliver/deliver_config.json'
+            'оплата':'subs/pay/cf_config_dual_bilstm_cnn_model.json',
+            'доставка': 'subs/deliver/cf_config_dual_bilstm_cnn_model.json'
             }
     mes = ''
     while mes != 'q':
-        ic = IntentsClassifier(root_config_path='root/cf_config.json',sub_configs = sub_configs)
+        ic = IntentsClassifier(root_config_path='root/cf_config_dual_bilstm_cnn_model.json',sub_configs = sub_configs)
         mes = input()
         print(ic.run(mes))

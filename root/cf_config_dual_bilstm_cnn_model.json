@@ -1,5 +1,5 @@
 {
-  "deeppavlov_root":"subs/deliver",
+  "deeppavlov_root":"root/",
   "dataset_reader": {
     "name": "basic_classification_reader",
     "data_path": "data/",
@@ -44,10 +44,12 @@
           "xv"
         ],
         "load_path":[
-            "ft_compressed.pkl"
-        ]
+        "root/ft_compressed.pkl",
+        "root/ft_compressed_local.pkl"
+        ],
+        "emb_dim": 15,
+        "emb_len":25
       },
-
       {
         "name": "cnn_model",
         "in": [
@@ -59,45 +61,49 @@
         "out": [
           "y_pred"
         ],
+        "architecture_name":"dual_bilstm_cnn_model",
         "loss": "categorical_crossentropy",
-        "metrics": "classification_accuracy",
+        "metrics": ["categorical_accuracy"],
         "optimizer": "adam",
-        "opt": {
-          "cnn_layers": [
+        "architecture_params": {
+        "bilstm_layers":[
             {
-              "filters": 84,
-              "kernel_size": 2
+            "units":64,
+            "activation":"relu",
+            "l2_power":1e-2
+            }
+        ],
+          "conv_layers": [
+            {
+              "units": 128,
+              "kernel_size": 1,
+              "activation":"relu",
+              "l2_power":1e-2
             },
             {
-              "filters": 42,
-              "kernel_size": 2
+              "units": 32,
+              "kernel_size": 2,
+              "activation":"relu",
+              "l2_power":1e-2
+            },
+            {
+              "units": 16,
+              "kernel_size": 3,
+              "activation":"relu",
+              "l2_power":1e-2
             }
           ],
           "emb_dim": 25,
-          "seq_len": 100,
+          "seq_len": 15,
           "pool_size": 4,
           "dropout_power": 0.5,
-          "l2_power":1e-3,
-          "n_classes": 6,
-          "pooling_size":2,
-          "classes":"subs/deliver/class_names.pkl",
+          "pool_size":2,
           "new2old":"new2old.pkl"
         },
-        "params":{
-            "text_size":50,
-            "embedding_size":25,
-            "units_lstm":20,
-            "coef_reg_lstm":1e-5,
-            "dropout_rate":0.5,
-            "rec_dropout_rate":0.4,
-            "kernel_sizes_cnn":[2,2],
-            "filters_cnn":[25,15],
-            "coef_reg_cnn":1e-4,
-            "coef_reg_den":1e-4,
-            "dense_size":20
-        },
-        "save_path":"cnn_weights.hdf5",
-        "load_path":"cnn_weights.hdf5"
+        "classes":"root/class_names.pkl",
+        "confident_threshold":0.15,
+        "save_path":"root/cnn_weights.hdf5",
+        "load_path":"root/cnn_weights.hdf5"
         
       }
     ],
