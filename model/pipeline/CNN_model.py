@@ -23,7 +23,7 @@ from keras.layers.core import Dropout
 from keras.layers.wrappers import Bidirectional
 from keras.models import Model
 from keras.layers import Input, Dense, Embedding,Concatenate
-from deeppavlov.models.classifiers.intents.utils import labels2onehot, log_metrics, proba2labels
+from deeppavlov.models.classifiers.utils import labels2onehot, log_metrics, proba2labels
 from deeppavlov.core.common.log import get_logger
 import numpy as np
 import pickle
@@ -125,7 +125,7 @@ class CNN_classifier(KerasModel):
         #va, la = add_noise(vectors, labels, 10)
         netin = [np.vstack(f) for f in feats]
         metrics_values = self.model.train_on_batch(netin,labels)
-        return metrics_values
+        return metrics_values[0]
     
     
     def infer_on_batch(self, batch, labels=None):
