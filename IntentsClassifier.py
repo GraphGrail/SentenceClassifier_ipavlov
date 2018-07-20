@@ -29,18 +29,24 @@ class InvalidModelLevelError(Exception):
     pass
 
 class IntentsClassifier():
-    def __init__(self, root_config_path, sub_configs = {}):
+    def __init__(self, root_config_path, 
+                 sub_configs = {
+            'оплата':'subs/pay/cf_config_dual_bilstm_cnn_model.json',
+            'доставка': 'subs/deliver/cf_config_dual_bilstm_cnn_model.json'
+            }):
         self.__root_config = root_config_path
+        self.__sub_models = {}
         if len(list(sub_configs.items()))>0:
             self.__sub_configs = sub_configs
+            for cl,conf in self.__sub_configs.items():
+                sc = read_json(conf)
+                self.__sub_models[cl] = build_model_from_config(sc)
+        else:
+            self.__sub_configs = {'not present':''}
         
         root_config = read_json(root_config_path)
         self.__root_model = build_model_from_config(root_config)
         
-        self.__sub_models = {}
-        for cl,conf in self.__sub_configs.items():
-            sc = read_json(conf)
-            self.__sub_models[cl] = build_model_from_config(sc)
         
         self.__data_equalizer = DataEqualizer()
 
@@ -130,7 +136,7 @@ if __name__ == '__main__':
     
     mes = ''
     while mes != 'q':
-        ic = IntentsClassifier(root_config_path='root/cf_config_dual_bilstm_cnn_model.json',sub_configs = sub_configs)
+        ic = IntentsClassifier(root_config_path='root/cf_config_dual_bilstm_cnn_model.json',sub_configs = {})
         mes = input()
         print(ic.run(mes))
     ic.train('subs','pay','df_raw.csv','subs/pay/cf_config_dual_bilstm_cnn_model.json', samples_per_class = 1500)
