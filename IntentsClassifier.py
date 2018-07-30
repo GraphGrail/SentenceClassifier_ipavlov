@@ -16,8 +16,12 @@ from model.pipeline.embedder import *
 from model.pipeline.CNN_model import *
 from model.pipeline.text_normalizer import *
 from utils.data_equalizer import DataEqualizer
+from utils.embeddings_builder import EmbeddingsBuilder
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import f1_score
+import gc
+import os
+import pickle
 
 class InvalidDataFormatError(Exception):
     pass
@@ -31,8 +35,6 @@ class InvalidModelLevelError(Exception):
 class IntentsClassifier():
     def __init__(self, root_config_path, 
                  sub_configs = {
-            'оплата':'subs/pay/cf_config_dual_bilstm_cnn_model.json',
-            'доставка': 'subs/deliver/cf_config_dual_bilstm_cnn_model.json'
             }):
         self.__root_config = root_config_path
         self.__sub_models = {}
@@ -44,8 +46,8 @@ class IntentsClassifier():
         else:
             self.__sub_configs = {'not present':''}
         
-        root_config = read_json(root_config_path)
-        self.__root_model = build_model_from_config(root_config)
+        #root_config = read_json(root_config_path)
+        #self.__root_model = build_model_from_config(root_config)
         
         
         self.__data_equalizer = DataEqualizer()
@@ -61,10 +63,10 @@ class IntentsClassifier():
                            classes=model.pipe[-1][-1].classes)[0]
         return {
             'decision': dec,
-            'confidence': np.max(res)
+            'confidence': np.sort(res)[0,-len(dec):].tolist()[::-1]
                }
     
-    def train(self, model_level, model_name, path_to_data, path_to_config, 
+    def train(self, model_level, model_name, path_to_data, path_to_config, path_to_global_embeddings,
               test_size = 0.15, aug_method = 'word_dropout', samples_per_class = None):
         df_raw = pd.read_csv(path_to_data)
         
@@ -85,17 +87,39 @@ class IntentsClassifier():
         model_path = model_level+ '/'
         if model_level == 'subs':
             model_path += model_name + '/'
-            
+        if not os.path.isdir(model_path):
+            os.mkdir(model_path)
+        if not os.path.isdir(model_path+'data/'):
+            os.mkdir(model_path+'data/')
         df_train_equalized.to_csv(model_path+'data/train.csv')
         df_val[['text', 'labels']].sample(frac = 1).to_csv(model_path+'data/valid.csv')
         df_test[['text', 'labels']].sample(frac = 1).to_csv(model_path+'df_test.csv')
-        
         config = read_json(path_to_config)
+        
+        eb = EmbeddingsBuilder(resulting_dim=config['chainer']['pipe'][1]['emb_len'],
+                               path_to_original_embeddings=path_to_global_embeddings)
+        tc = TextCorrector()
+        corpus_cleaned = tc.tn.transform(df_raw.text.tolist())
+        eb.compress_embeddings(corpus_cleaned,model_path+'ft_compressed.pkl','pca',eb.path_to_original_embeddings)
+        gc.collect()
+        eb.build_local_embeddings(corpus_cleaned,model_path+'ft_compressed_local.pkl')
+        pickle.dump(df_train['labels'].value_counts().index.tolist(), open(model_path+'class_names.pkl','wb'))
+        
         set_deeppavlov_root(config)
+        training_status = 'Classification model {} {} is currently training. Total number of epochs is set to {}'.format(model_level, model_name, config['train']['epochs'])
+        with open(model_path+'status.txt','w') as f:
+            f.writelines(training_status)
         train_evaluate_model_from_config(path_to_config)
+        training_status = 'Classification model {} {} is trained'.format(model_level, model_name)
+        with open(model_path+'status.txt','w') as f:
+            f.writelines(training_status)
         perf = self.get_performance(path_to_config, model_path+'df_test.csv')
         print('f1_macro: {}'.format(perf))
         
+    def get_status(model_directory):
+        with open(model_directory+'status.txt') as f:
+            status = f.readlines()
+        return status
         
     def get_performance(self, path_to_config, path_to_test_data):    
         df_test = pd.read_csv(path_to_test_data)
@@ -121,6 +145,7 @@ class IntentsClassifier():
         root_res = self.__predict(root_model,message)
         res['root'] = root_res
         res['subs'] = {}
+        
         for dec in root_res['decision']:
             if dec in list(self.__sub_configs.keys()):
                 sc = read_json(self.__sub_configs[dec])
@@ -133,10 +158,12 @@ if __name__ == '__main__':
             'оплата':'subs/pay/cf_config_dual_bilstm_cnn_model.json',
             'доставка': 'subs/deliver/cf_config_dual_bilstm_cnn_model.json'
             }
-    
+    ic = IntentsClassifier(root_config_path='root/cf_config_dual_bilstm_cnn_model.json',sub_configs = sub_configs)
+    ic.train('root','','df_raw.csv','root/cf_config_dual_bilstm_cnn_model.json', 
+             path_to_global_embeddings = '/home/lsm/projects/general_purpose/embeddings/fasttext/ft_native_300_ru_wiki_lenta_lemmatize.bin',
+             samples_per_class = 1500)
     mes = ''
     while mes != 'q':
-        ic = IntentsClassifier(root_config_path='root/cf_config_dual_bilstm_cnn_model.json',sub_configs = {})
+        ic = IntentsClassifier(root_config_path='root/cf_config_dual_bilstm_cnn_model.json',sub_configs = sub_configs)
         mes = input()
         print(ic.run(mes))
-    ic.train('subs','pay','df_raw.csv','subs/pay/cf_config_dual_bilstm_cnn_model.json', samples_per_class = 1500)
