@@ -67,7 +67,8 @@ class IntentsClassifier():
                }
     
     def train(self, model_level, model_name, path_to_data, path_to_config, path_to_global_embeddings,
-              test_size = 0.15, aug_method = 'word_dropout', samples_per_class = None):
+              test_size = 0.15, aug_method = 'word_dropout', samples_per_class = None,
+              class_names = None):
         df_raw = pd.read_csv(path_to_data)
         
         if 'labels' not in df_raw or 'text' not in df_raw:
@@ -103,7 +104,10 @@ class IntentsClassifier():
         eb.compress_embeddings(corpus_cleaned,model_path+'ft_compressed.pkl','pca',eb.path_to_original_embeddings)
         gc.collect()
         eb.build_local_embeddings(corpus_cleaned,model_path+'ft_compressed_local.pkl')
-        pickle.dump(df_train['labels'].value_counts().index.tolist(), open(model_path+'class_names.pkl','wb'))
+        if type(class_names)==list:
+            pickle.dump(class_names, open(model_path+'class_names.pkl','wb'))
+        else:
+            pickle.dump(df_train['labels'].value_counts().index.tolist(), open(model_path+'class_names.pkl','wb'))
         
         set_deeppavlov_root(config)
         training_status = 'Classification model {} {} is currently training. Total number of epochs is set to {}'.format(model_level, model_name, config['train']['epochs'])
@@ -161,7 +165,8 @@ if __name__ == '__main__':
     ic = IntentsClassifier(root_config_path='root/cf_config_dual_bilstm_cnn_model.json',sub_configs = sub_configs)
     ic.train('root','','df_raw.csv','root/cf_config_dual_bilstm_cnn_model.json', 
              path_to_global_embeddings = '/home/lsm/projects/general_purpose/embeddings/fasttext/ft_native_300_ru_wiki_lenta_lemmatize.bin',
-             samples_per_class = 1500)
+             samples_per_class = 1500,
+             class_names = ['доставка', 'оплата', 'другое','намерение сделать заказ'])
     mes = ''
     while mes != 'q':
         ic = IntentsClassifier(root_config_path='root/cf_config_dual_bilstm_cnn_model.json',sub_configs = sub_configs)
