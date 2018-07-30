@@ -26,6 +26,7 @@ Use 'train' method to train new model. Parameters for 'train':
 - samples_per_class number of samples per class in equalized dataset, None for leaving the classes distribution intact (default value: None).
 
 - path_to_global_embeddings - path to embeddings file in fasttext '.bin' format.
+
 For example:
 
     ic.train('root','','df_raw.csv','root/cf_config_dual_bilstm_cnn_model.json', 
