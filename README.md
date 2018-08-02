@@ -27,6 +27,10 @@ Use 'train' method to train new model. Parameters for 'train':
 
 - path_to_global_embeddings - path to embeddings file in fasttext '.bin' format.
 
+- path_to_save_file - path to folder to store the weights obtained during training.
+
+- path_to_resulting_file - path to folder to store the best weights after training (the last saved weights file will be copied to this folder).
+
 For example:
 
     ic.train('root','','df_raw.csv','root/cf_config_dual_bilstm_cnn_model.json', 
