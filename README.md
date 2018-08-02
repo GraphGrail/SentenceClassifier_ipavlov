@@ -26,4 +26,9 @@ Use 'train' method to train new model. Parameters for 'train':
 
 - samples_per_class number of samples per class in equalized dataset, None for leaving the classes distribution intact (default value: None).
 
+- path_to_save_file - path to file to store the obtained weights.
+
+- path_to_resulting_file - path to copy the best weights obtained during training.
+
+
 Use 'get_performance' method to evaluate model on test set with f1 metric (macro averaging). Called automatically at the end of 'train'.
