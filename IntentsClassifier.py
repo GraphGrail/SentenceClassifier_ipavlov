@@ -8,7 +8,7 @@ Created on Sun Jun 24 14:32:43 2018
 
 from deeppavlov.core.commands.train import train_evaluate_model_from_config
 from deeppavlov.core.commands.utils import expand_path, set_deeppavlov_root
-from deeppavlov.core.common.file import read_json
+from deeppavlov.core.common.file import read_json,save_json
 import numpy as np
 import pandas as pd
 from deeppavlov.core.commands.infer import *
@@ -17,11 +17,13 @@ from model.pipeline.CNN_model import *
 from model.pipeline.text_normalizer import *
 from utils.data_equalizer import DataEqualizer
 from utils.embeddings_builder import EmbeddingsBuilder
+from utils.check_config import check_config
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import f1_score
 import gc
 import os
 import pickle
+from shutil import copy
 
 class InvalidDataFormatError(Exception):
     pass
@@ -32,6 +34,9 @@ class InvalidDataAugmentationMethodError(Exception):
 class InvalidModelLevelError(Exception):
     pass
 
+class InvalidConfig(Exception):
+    def __init__(self,errors,mes):
+        save_json(errors,'config_chceck_report.json')
 class IntentsClassifier():
     def __init__(self, root_config_path, 
                  sub_configs = {
@@ -68,7 +73,10 @@ class IntentsClassifier():
     
     def train(self, model_level, model_name, path_to_data, path_to_config, path_to_global_embeddings,
               test_size = 0.15, aug_method = 'word_dropout', samples_per_class = None,
-              class_names = None):
+              class_names = None,
+              path_to_save_file = None,
+              path_to_resulting_file = None):
+        #preparing training/testing data
         df_raw = pd.read_csv(path_to_data)
         
         if 'labels' not in df_raw or 'text' not in df_raw:
@@ -95,30 +103,57 @@ class IntentsClassifier():
         df_train_equalized.to_csv(model_path+'data/train.csv')
         df_val[['text', 'labels']].sample(frac = 1).to_csv(model_path+'data/valid.csv')
         df_test[['text', 'labels']].sample(frac = 1).to_csv(model_path+'df_test.csv')
+        
+        #preparing model
         config = read_json(path_to_config)
         
+        #making embeddings
         eb = EmbeddingsBuilder(resulting_dim=config['chainer']['pipe'][1]['emb_len'],
                                path_to_original_embeddings=path_to_global_embeddings)
         tc = TextCorrector()
         corpus_cleaned = tc.tn.transform(df_raw.text.tolist())
-        eb.compress_embeddings(corpus_cleaned,model_path+'ft_compressed.pkl','pca',eb.path_to_original_embeddings)
+        if not os.path.isfile(model_path+'ft_compressed.pkl'):
+            eb.compress_embeddings(corpus_cleaned,model_path+'ft_compressed.pkl','pca',eb.path_to_original_embeddings)
         gc.collect()
-        eb.build_local_embeddings(corpus_cleaned,model_path+'ft_compressed_local.pkl')
+        if not os.path.isfile(model_path+'ft_compressed_local.pkl'):
+            eb.build_local_embeddings(corpus_cleaned,model_path+'ft_compressed_local.pkl')
+        #dealing with class_names
         if type(class_names)==list:
             pickle.dump(class_names, open(model_path+'class_names.pkl','wb'))
         else:
             pickle.dump(df_train['labels'].value_counts().index.tolist(), open(model_path+'class_names.pkl','wb'))
-        
+        #setting up saving and loading
+        if not path_to_save_file == None:
+            config['chainer']['pipe'][-1]['save_path'] = path_to_save_file
+            
+        if not os.path.isdir(path_to_save_file) and not path_to_save_file==None:
+            os.mkdir(path_to_save_file)
+            save_json(config,path_to_config)
+            
+        if not os.path.isdir(path_to_resulting_file) and not path_to_resulting_file == None:
+            os.mkdir(path_to_resulting_file)
+            save_json(config,path_to_config)
+
+        check_results = check_config(path_to_config)
+        if len(check_results)>0:
+            raise InvalidConfig(check_results,'Config file is invalid')
+
+        #training
         set_deeppavlov_root(config)
+        #update training status
         training_status = 'Classification model {} {} is currently training. Total number of epochs is set to {}'.format(model_level, model_name, config['train']['epochs'])
         with open(model_path+'status.txt','w') as f:
             f.writelines(training_status)
+        #fukken training
         train_evaluate_model_from_config(path_to_config)
+        #updating status
         training_status = 'Classification model {} {} is trained'.format(model_level, model_name)
         with open(model_path+'status.txt','w') as f:
             f.writelines(training_status)
+        #getting performance
         perf = self.get_performance(path_to_config, model_path+'df_test.csv')
         print('f1_macro: {}'.format(perf))
+        copy(path_to_save_file+'weights.hdf5', path_to_resulting_file)
         
     def get_status(model_directory):
         with open(model_directory+'status.txt') as f:
@@ -166,7 +201,9 @@ if __name__ == '__main__':
     ic.train('root','','df_raw.csv','root/cf_config_dual_bilstm_cnn_model.json', 
              path_to_global_embeddings = '/home/lsm/projects/general_purpose/embeddings/fasttext/ft_native_300_ru_wiki_lenta_lemmatize.bin',
              samples_per_class = 1500,
-             class_names = ['доставка', 'оплата', 'другое','намерение сделать заказ'])
+             class_names = ['доставка', 'оплата', 'другое','намерение сделать заказ'],
+             path_to_save_file='temp_save/',
+             path_to_resulting_file='temp/')
     mes = ''
     while mes != 'q':
         ic = IntentsClassifier(root_config_path='root/cf_config_dual_bilstm_cnn_model.json',sub_configs = sub_configs)
