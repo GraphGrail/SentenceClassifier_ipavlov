@@ -15,11 +15,13 @@ from deeppavlov.core.commands.infer import *
 from model.pipeline.embedder import *
 from model.pipeline.CNN_model import *
 from model.pipeline.text_normalizer import *
+from utils.stop_words_remover import *
 from utils.data_equalizer import DataEqualizer
 from utils.embeddings_builder import EmbeddingsBuilder
 from utils.check_config import check_config
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import f1_score
+
 import gc
 import os
 import pickle
@@ -108,7 +110,7 @@ class IntentsClassifier():
         config = read_json(path_to_config)
         
         #making embeddings
-        eb = EmbeddingsBuilder(resulting_dim=config['chainer']['pipe'][1]['emb_len'],
+        eb = EmbeddingsBuilder(resulting_dim=config['chainer']['pipe'][2]['emb_len'],
                                path_to_original_embeddings=path_to_global_embeddings)
         tc = TextCorrector()
         corpus_cleaned = tc.tn.transform(df_raw.text.tolist())
@@ -124,8 +126,8 @@ class IntentsClassifier():
             pickle.dump(df_train['labels'].value_counts().index.tolist(), open(model_path+'class_names.pkl','wb'))
         #setting up saving and loading
         if not path_to_save_file == None:
-            config['chainer']['pipe'][-1]['save_path'] = path_to_save_file
-            
+            config['chainer']['pipe'][-1]['save_path'] = path_to_save_file+'weights.hdf5'
+            save_json(config,path_to_config)
         if not os.path.isdir(path_to_save_file) and not path_to_save_file==None:
             os.mkdir(path_to_save_file)
             save_json(config,path_to_config)
