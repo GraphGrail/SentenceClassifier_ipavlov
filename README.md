@@ -47,4 +47,4 @@ Use 'check_config' method to validate the config file for the model:
         from utils.check_config import check_config
         check_results = check_config(path_to_config)
         if len(check_results)>0:
-            raise InvalidConfig(check_results,'Config file is invalid')
+                raise InvalidConfig(check_results,'Config file is invalid')
