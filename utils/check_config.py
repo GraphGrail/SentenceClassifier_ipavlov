@@ -66,11 +66,11 @@ def check_config(path_to_config):
         if not check_model_registry(model):
             invalid_fields.append(model)
     
-    if not  check_file_existance(config['chainer']['pipe'][1]['load_path'][0]):
-        invalid_fields.append(config['chainer']['pipe'][1]['load_path'][0])
+    if not  check_file_existance(config['chainer']['pipe'][2]['load_path'][0]):
+        invalid_fields.append(config['chainer']['pipe'][2]['load_path'][0])
     
-    if not check_file_existance(config['chainer']['pipe'][1]['load_path'][1]):
-        invalid_fields.append(config['chainer']['pipe'][1]['load_path'][1])
+    if not check_file_existance(config['chainer']['pipe'][2]['load_path'][1]):
+        invalid_fields.append(config['chainer']['pipe'][2]['load_path'][1])
     
     if not check_file_existance(config['chainer']['pipe'][-1]['classes']):
         invalid_fields.append(config['chainer']['pipe'][-1]['classes'])
