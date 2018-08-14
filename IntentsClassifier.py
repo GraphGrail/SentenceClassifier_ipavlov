@@ -18,9 +18,10 @@ from model.pipeline.text_normalizer import *
 from utils.stop_words_remover import *
 from utils.data_equalizer import DataEqualizer
 from utils.embeddings_builder import EmbeddingsBuilder
-from utils.check_config import check_config
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import f1_score
+from deeppavlov.core.common.metrics_registry import get_metrics_by_names
+from deeppavlov.core.common.registry import get_model
 
 import gc
 import os
@@ -72,6 +73,64 @@ class IntentsClassifier():
             'decision': dec,
             'confidence': np.sort(res)[0,-len(dec):].tolist()[::-1]
                }
+
+    def check_config(self,path_to_config):
+        def check_metrics_registry(model_name):
+            try:
+                get_metrics_by_names(model_name)
+            except BaseException:
+                return False
+            return True
+        
+        def check_model_registry(model_name):
+            try:
+                get_model(model_name)
+            except BaseException:
+                return False
+            return True
+                #raise InvalidModelError('{} is not a valid model name'.format(model_name))
+        def check_file_existance(filepath):
+            if not os.path.exists(filepath) and not filepath == "":
+                return False
+            return True
+            
+        def find_values(id, json_repr):
+            results = []
+        
+            def _decode_dict(a_dict):
+                try: results.append(a_dict[id])
+                except KeyError: pass
+                return a_dict
+        
+            json.loads(json_repr, object_hook=_decode_dict)  # Return value ignored.
+            return results
+        
+        config = read_json(path_to_config)
+        
+        models = find_values('name',json.dumps(config))
+        invalid_fields = []
+        for model in models:
+            if not check_model_registry(model):
+                invalid_fields.append(model)
+        
+        if not  check_file_existance(config['chainer']['pipe'][2]['load_path'][0]):
+            invalid_fields.append(config['chainer']['pipe'][2]['load_path'][0])
+        
+        if not check_file_existance(config['chainer']['pipe'][2]['load_path'][1]):
+            invalid_fields.append(config['chainer']['pipe'][2]['load_path'][1])
+        
+        if not check_file_existance(config['chainer']['pipe'][-1]['classes']):
+            invalid_fields.append(config['chainer']['pipe'][-1]['classes'])
+        
+        invalid_metrics = []
+        
+        for metric in config['train']['metrics']:
+            if not check_metrics_registry([metric]):
+                invalid_metrics.append(metric)
+        if len(invalid_metrics)>0:
+            invalid_fields += invalid_metrics
+            
+        return invalid_fields
     
     def train(self, model_level, model_name, path_to_data, path_to_config, path_to_global_embeddings,
               test_size = 0.15, aug_method = 'word_dropout', samples_per_class = None,
@@ -136,7 +195,7 @@ class IntentsClassifier():
             os.mkdir(path_to_resulting_file)
             save_json(config,path_to_config)
 
-        check_results = check_config(path_to_config)
+        check_results = self.check_config(path_to_config)
         if len(check_results)>0:
             raise InvalidConfig(check_results,'Config file is invalid')
 
