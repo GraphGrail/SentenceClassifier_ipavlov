@@ -74,7 +74,8 @@ class IntentsClassifier():
             'confidence': np.sort(res)[0,-len(dec):].tolist()[::-1]
                }
 
-    def check_config(self,path_to_config):
+    @classmethod
+    def check_config(path_to_config):
         def check_metrics_registry(model_name):
             try:
                 get_metrics_by_names(model_name)
