@@ -75,7 +75,7 @@ class IntentsClassifier():
                }
 
     @classmethod
-    def check_config(path_to_config):
+    def check_config(cls, path_to_config):
         def check_metrics_registry(model_name):
             try:
                 get_metrics_by_names(model_name)
