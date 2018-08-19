@@ -23,7 +23,9 @@ class DataEqualizer():
         texts = []
         labels = []
         for c, cn in zip(all_classes, all_classes_n):
-            if cn<samples_per_class:
+            if samples_per_class == None:
+                tdf = df_train[df_train['labels'] == c]
+            elif cn<samples_per_class:
                 tofill = samples_per_class-cn
                 class_df = df_train[df_train['labels'] == c]
                 filling_idx = np.random.randint(low = 0, high = class_df.shape[1],size=tofill)
@@ -37,8 +39,6 @@ class DataEqualizer():
             elif cn>=samples_per_class:
                 class_df = df_train[df_train['labels'] == c]
                 tdf = class_df.sample(samples_per_class)
-            elif samples_per_class == None:
-                tdf = df_train[df_train['labels'] == c]
             
             texts.append(tdf.text.values)
             labels.append(tdf['labels'].values)

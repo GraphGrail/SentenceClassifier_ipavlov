@@ -27,6 +27,7 @@ import gc
 import os
 import pickle
 from shutil import copy
+import json
 
 class InvalidDataFormatError(Exception):
     pass
