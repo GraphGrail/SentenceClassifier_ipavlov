@@ -81,7 +81,7 @@ class IntentsClassifier():
                }
 
     @classmethod
-    def check_config(cls, path_to_config):
+    def check_config(cls, config):
         def check_metrics_registry(model_name):
             try:
                 get_metrics_by_names(model_name)
@@ -112,7 +112,8 @@ class IntentsClassifier():
             json.loads(json_repr, object_hook=_decode_dict)  # Return value ignored.
             return results
         
-        config = read_json(path_to_config)
+        if type(config)==str:
+            config = read_json(config)
         
         models = find_values('name',json.dumps(config))
         invalid_fields = []
@@ -212,8 +213,8 @@ class IntentsClassifier():
             config['chainer']['pipe'][config['chainer']['pipe'].index(emb_config)]['load_path'][0] = config['deeppavlov_root']+config['chainer']['pipe'][config['chainer']['pipe'].index(emb_config)]['load_path'][0]
             config['chainer']['pipe'][config['chainer']['pipe'].index(emb_config)]['load_path'][1] = config['deeppavlov_root']+config['chainer']['pipe'][config['chainer']['pipe'].index(emb_config)]['load_path'][1]
             config['chainer']['pipe'][config['chainer']['pipe'].index(cnn_config)]['classes'] = config['deeppavlov_root']+config['chainer']['pipe'][config['chainer']['pipe'].index(cnn_config)]['classes']
-            config['dataset_reader']['data_path'] = model_path+config['dataset_reader']['data_path']
-        check_results = self.check_config(path_to_config)
+            config['dataset_reader']['data_path'] = config['deeppavlov_root']+config['dataset_reader']['data_path']
+        check_results = self.check_config(config)
         if len(check_results)>0:
             raise InvalidConfig(check_results,'Config file is invalid')
 
