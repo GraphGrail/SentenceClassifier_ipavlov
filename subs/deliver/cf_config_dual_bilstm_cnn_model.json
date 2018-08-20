@@ -1,8 +1,8 @@
 {
-  "deeppavlov_root":"subs/deliver",
+  "deeppavlov_root":"",
   "dataset_reader": {
     "name": "basic_classification_reader",
-    "data_path": "data/",
+    "data_path": "subs/deliver/data/",
     "class_sep": "________"
   },
   "dataset_iterator": {

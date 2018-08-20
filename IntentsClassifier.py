@@ -148,6 +148,9 @@ class IntentsClassifier():
               path_to_resulting_file = None):
         #preparing training/testing data
         df_raw = pd.read_csv(path_to_data)
+
+        #preparing config
+        config = read_json(path_to_config)
         
         if 'labels' not in df_raw or 'text' not in df_raw:
             raise InvalidDataFormatError('\'labels\' and \'text\' columns must be in the dataframe')
@@ -163,7 +166,7 @@ class IntentsClassifier():
         
         df_train_equalized = self.__data_equalizer.equalize_classes(df_train, samples_per_class, aug_method)
 
-        model_path = model_level+ '/'
+        model_path = config['deeppavlov_root']+model_level+ '/'
         if model_level == 'subs':
             model_path += model_name + '/'
         if not os.path.isdir(model_path):
@@ -174,9 +177,8 @@ class IntentsClassifier():
         df_val[['text', 'labels']].sample(frac = 1).to_csv(model_path+'data/valid.csv')
         df_test[['text', 'labels']].sample(frac = 1).to_csv(model_path+'df_test.csv')
         
-        #preparing model
-        config = read_json(path_to_config)
-        
+
+
         #making embeddings
         emb_len = IntentsClassifier.get_config_element_by_name(config = config['chainer']['pipe'],name = 'embedder')['emb_len']
         eb = EmbeddingsBuilder(resulting_dim=emb_len,
@@ -204,7 +206,13 @@ class IntentsClassifier():
         if not os.path.isdir(path_to_resulting_file) and not path_to_resulting_file == None:
             os.mkdir(path_to_resulting_file)
             save_json(config,path_to_config)
-
+        emb_config = IntentsClassifier.get_config_element_by_name(config['chainer']['pipe'],'embedder')
+        cnn_config= IntentsClassifier.get_config_element_by_name(config['chainer']['pipe'],'cnn_model')
+        if not config['deeppavlov_root'] == '':
+            config['chainer']['pipe'][config['chainer']['pipe'].index(emb_config)]['load_path'][0] = config['deeppavlov_root']+config['chainer']['pipe'][config['chainer']['pipe'].index(emb_config)]['load_path'][0]
+            config['chainer']['pipe'][config['chainer']['pipe'].index(emb_config)]['load_path'][1] = config['deeppavlov_root']+config['chainer']['pipe'][config['chainer']['pipe'].index(emb_config)]['load_path'][1]
+            config['chainer']['pipe'][config['chainer']['pipe'].index(cnn_config)]['classes'] = config['deeppavlov_root']+config['chainer']['pipe'][config['chainer']['pipe'].index(cnn_config)]['classes']
+            config['dataset_reader']['data_path'] = model_path+config['dataset_reader']['data_path']
         check_results = self.check_config(path_to_config)
         if len(check_results)>0:
             raise InvalidConfig(check_results,'Config file is invalid')
@@ -216,7 +224,8 @@ class IntentsClassifier():
         with open(model_path+'status.txt','w') as f:
             f.writelines(training_status)
         #fukken training
-        train_evaluate_model_from_config(path_to_config)
+        #train_evaluate_model_from_config(path_to_config)
+        train_evaluate_model_from_config(config)
         #updating status
         training_status = 'Classification model {} {} is trained'.format(model_level, model_name)
         with open(model_path+'status.txt','w') as f:

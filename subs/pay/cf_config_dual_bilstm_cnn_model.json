@@ -2,7 +2,7 @@
   "deeppavlov_root":"subs/pay",
   "dataset_reader": {
     "name": "basic_classification_reader",
-    "data_path": "data/",
+    "data_path": "subs/pay/data/",
     "class_sep": "________"
   },
   "dataset_iterator": {
