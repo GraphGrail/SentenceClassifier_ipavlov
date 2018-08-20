@@ -60,8 +60,13 @@ class IntentsClassifier():
         
         
         self.__data_equalizer = DataEqualizer()
-
-    
+    @classmethod
+    def get_config_element_by_name(cls, config, name):
+        els = [el for el in config if el['name']==name]
+        if len(els)>0:
+            return els[0]
+        else:
+            raise InvalidConfig(errors = None,mes = 'element %s is not found'%(name))
     def __predict(self, model, input_text):
         rp = model.pipe[0][-1]([input_text])
         for i in range(1,len(model.pipe)-1):
@@ -114,15 +119,17 @@ class IntentsClassifier():
         for model in models:
             if not check_model_registry(model):
                 invalid_fields.append(model)
+        emb = IntentsClassifier.get_config_element_by_name(config = config['chainer']['pipe'],name = 'embedder')
+        if not  check_file_existance(emb['load_path'][0]):
+            invalid_fields.append(emb['load_path'][0])
         
-        if not  check_file_existance(config['chainer']['pipe'][2]['load_path'][0]):
-            invalid_fields.append(config['chainer']['pipe'][2]['load_path'][0])
+        if not check_file_existance(emb['load_path'][1]):
+            invalid_fields.append(emb['load_path'][1])
         
-        if not check_file_existance(config['chainer']['pipe'][2]['load_path'][1]):
-            invalid_fields.append(config['chainer']['pipe'][2]['load_path'][1])
+        mdl = IntentsClassifier.get_config_element_by_name(config = config['chainer']['pipe'],name = 'cnn_model')
         
-        if not check_file_existance(config['chainer']['pipe'][-1]['classes']):
-            invalid_fields.append(config['chainer']['pipe'][-1]['classes'])
+        if not check_file_existance(mdl['classes']):
+            invalid_fields.append(mdl['classes'])
         
         invalid_metrics = []
         
@@ -171,7 +178,8 @@ class IntentsClassifier():
         config = read_json(path_to_config)
         
         #making embeddings
-        eb = EmbeddingsBuilder(resulting_dim=config['chainer']['pipe'][2]['emb_len'],
+        emb_len = IntentsClassifier.get_config_element_by_name(config = config['chainer']['pipe'],name = 'embedder')['emb_len']
+        eb = EmbeddingsBuilder(resulting_dim=emb_len,
                                path_to_original_embeddings=path_to_global_embeddings)
         tc = TextCorrector()
         corpus_cleaned = tc.tn.transform(df_raw.text.tolist())
