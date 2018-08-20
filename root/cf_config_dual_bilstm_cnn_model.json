@@ -2,7 +2,7 @@
   "deeppavlov_root":"root/",
   "dataset_reader": {
     "name": "basic_classification_reader",
-    "data_path": "data/",
+    "data_path": "root/data/",
     "class_sep": "________"
   },
   "dataset_iterator": {

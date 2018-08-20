@@ -51,3 +51,6 @@ Use 'check_config' method to validate the config file for the model:
         check_results = check_config(path_to_config)
         if len(check_results)>0:
             raise InvalidConfig(check_results,'Config file is invalid')
+
+
+'root' and 'subs' folders should be located in the same directory as IntentsClassifier.py. Otherwise, specify "deeppavlov_root" key in the config.
