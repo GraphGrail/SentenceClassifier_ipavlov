@@ -15,7 +15,7 @@ from deeppavlov.core.common.registry import register
 from deeppavlov.core.models.component import Component
 from deeppavlov.core.common.log import get_logger
 from deeppavlov.core.models.serializable import Serializable
-from model.pipeline.TextNormalizer import TextNormalizer
+from SentenceClassifier_ipavlov.model.pipeline.TextNormalizer import TextNormalizer
 
 log = get_logger(__name__)
 

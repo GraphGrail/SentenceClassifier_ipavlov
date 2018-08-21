@@ -33,9 +33,16 @@ Use 'train' method to train new model. Parameters for 'train':
 
 For example:
 
-    ic.train('root','','df_raw.csv','root/cf_config_dual_bilstm_cnn_model.json', 
-             path_to_global_embeddings = '/home/lsm/projects/general_purpose/embeddings/fasttext/ft_native_300_ru_wiki_lenta_lemmatize.bin',
-             samples_per_class = 1500)
+	ic.train(model_level='root',
+         model_name= '',
+         path_to_data='../ai_models_train/42/df_raw.csv',
+         path_to_config='../ai_models_train/42/cf_config_dual_bilstm_cnn_model.json',
+         path_to_global_embeddings='../ai_models/shared/ft_native_300_ru_wiki_lenta_lemmatize.bin',
+         samples_per_class=1500,
+         class_names=['доставка', 'оплата', 'другое', 'намерение сделать заказ'],
+         path_to_save_file='../ai_models_train/42/',
+         path_to_resulting_file='../ai_models_train/42/')
+
              
 Use 'get_performance' method to evaluate model on test set with f1 metric (macro averaging). Called automatically at the end of 'train':
 
@@ -53,4 +60,4 @@ Use 'check_config' method to validate the config file for the model:
             raise InvalidConfig(check_results,'Config file is invalid')
 
 
-'root' and 'subs' folders should be located in the same directory as IntentsClassifier.py. Otherwise, specify "deeppavlov_root" key in the config.
+All model's files are stored in config['model_path'] folder. Other paths contain just filenames.

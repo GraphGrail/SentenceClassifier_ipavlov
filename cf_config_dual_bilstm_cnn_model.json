@@ -1,0 +1,131 @@
+{
+  "deeppavlov_root":"",
+  "model_path":"../ai_models_train/42/",
+  "dataset_reader": {
+    "name": "basic_classification_reader",
+    "data_path": "data/",
+    "class_sep": "________"
+  },
+  "dataset_iterator": {
+    "name": "basic_classification_iterator",
+    "seed": 42,
+    "fields_to_merge": [
+      "train",
+      "valid"
+    ],
+    "merged_field": "train",
+    "field_to_split": "train",
+    "split_fields": [
+      "train",
+      "valid"
+    ],
+    "split_proportions": [
+      0.9,
+      0.1
+    ]
+  },
+  "chainer": {
+    "pipe": [
+      {
+        "name": "text_normalizer",
+        "id": "text_normalizer",
+        "in": [
+          "x"
+        ],
+        "out": [
+          "xn"
+        ]
+      },
+      {
+        "name": "embedder",
+        "in": [
+          "xn"
+        ],
+        "out": [
+          "xv"
+        ],
+        "load_path": [
+          "ft_compressed.pkl",
+          "ft_compressed_local.pkl"
+        ],
+        "emb_dim": 15,
+        "emb_len": 25
+      },
+      {
+        "name": "cnn_model",
+        "in": [
+          "xv"
+        ],
+        "in_y": [
+          "y"
+        ],
+        "out": [
+          "y_pred"
+        ],
+        "architecture_name": "dual_bilstm_cnn_model",
+        "loss": "categorical_crossentropy",
+        "metrics": [
+          "categorical_accuracy"
+        ],
+        "optimizer": "adam",
+        "architecture_params": {
+          "bilstm_layers": [
+            {
+              "units": 64,
+              "activation": "relu",
+              "l2_power": 0.01
+            }
+          ],
+          "conv_layers": [
+            {
+              "units": 128,
+              "kernel_size": 1,
+              "activation": "relu",
+              "l2_power": 0.01
+            },
+            {
+              "units": 32,
+              "kernel_size": 2,
+              "activation": "relu",
+              "l2_power": 0.01
+            },
+            {
+              "units": 16,
+              "kernel_size": 3,
+              "activation": "relu",
+              "l2_power": 0.01
+            }
+          ],
+          "emb_dim": 25,
+          "seq_len": 15,
+          "pool_size": 2,
+          "dropout_power": 0.5,
+          "new2old": "new2old.pkl"
+        },
+        "classes": "class_names.pkl",
+        "confident_threshold": 0.15,
+        "save_path": "weights.hdf5",
+        "load_path": "cnn_weights.hdf5"
+      }
+    ],
+    "out": [
+      "y_pred"
+    ],
+    "in": [
+      "x"
+    ],
+    "in_y": [
+      "y"
+    ]
+  },
+  "train": {
+    "validation_patience": 10000,
+    "epochs": 2,
+    "batch_size": 32,
+    "metrics": [
+      "sets_accuracy"
+    ],
+    "val_every_n_epochs": 1,
+    "log_every_n_epochs": 1
+  }
+}

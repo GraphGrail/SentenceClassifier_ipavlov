@@ -12,12 +12,13 @@ from deeppavlov.core.common.file import read_json,save_json
 import numpy as np
 import pandas as pd
 from deeppavlov.core.commands.infer import *
-from model.pipeline.embedder import *
-from model.pipeline.CNN_model import *
-from model.pipeline.text_normalizer import *
-from utils.stop_words_remover import *
-from utils.data_equalizer import DataEqualizer
-from utils.embeddings_builder import EmbeddingsBuilder
+from deeppavlov.models.classifiers.utils import proba2labels
+from SentenceClassifier_ipavlov.model.pipeline.embedder import *
+from SentenceClassifier_ipavlov.model.pipeline.CNN_model import *
+from SentenceClassifier_ipavlov.model.pipeline.text_normalizer import *
+from SentenceClassifier_ipavlov.utils.stop_words_remover import *
+from SentenceClassifier_ipavlov.utils.data_equalizer import DataEqualizer
+from SentenceClassifier_ipavlov.utils.embeddings_builder import EmbeddingsBuilder
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import f1_score
 from deeppavlov.core.common.metrics_registry import get_metrics_by_names
@@ -45,19 +46,33 @@ class IntentsClassifier():
     def __init__(self, root_config_path, 
                  sub_configs = {
             }):
+        def prepare_config(config):
+            model_path = config['model_path']
+            emb_config = IntentsClassifier.get_config_element_by_name(config['chainer']['pipe'], 'embedder')
+            cnn_config = IntentsClassifier.get_config_element_by_name(config['chainer']['pipe'], 'cnn_model')
+            config['chainer']['pipe'][config['chainer']['pipe'].index(emb_config)]['load_path'][0] = os.path.abspath(
+                model_path) + '/' + config['chainer']['pipe'][config['chainer']['pipe'].index(emb_config)]['load_path'][
+                                                                                                         0]
+            config['chainer']['pipe'][config['chainer']['pipe'].index(emb_config)]['load_path'][1] = os.path.abspath(
+                model_path) + '/' + config['chainer']['pipe'][config['chainer']['pipe'].index(emb_config)]['load_path'][
+                                                                                                         1]
+            config['chainer']['pipe'][config['chainer']['pipe'].index(cnn_config)]['classes'] = os.path.abspath(
+                model_path) + '/' + config['chainer']['pipe'][config['chainer']['pipe'].index(cnn_config)]['classes']
+            config['dataset_reader']['data_path'] = os.path.abspath(model_path) + '/' + config['dataset_reader'][
+                'data_path']
+            config['chainer']['pipe'][-1]['load_path'] = os.path.abspath(model_path)+'/'+config['chainer']['pipe'][-1]['load_path']
+            return config
+
         self.__root_config = root_config_path
         self.__sub_models = {}
         if len(list(sub_configs.items()))>0:
             self.__sub_configs = sub_configs
             for cl,conf in self.__sub_configs.items():
                 sc = read_json(conf)
+                sc = prepare_config(sc)
                 self.__sub_models[cl] = build_model_from_config(sc)
         else:
             self.__sub_configs = {'not present':''}
-        
-        #root_config = read_json(root_config_path)
-        #self.__root_model = build_model_from_config(root_config)
-        
         
         self.__data_equalizer = DataEqualizer()
     @classmethod
@@ -95,7 +110,6 @@ class IntentsClassifier():
             except BaseException:
                 return False
             return True
-                #raise InvalidModelError('{} is not a valid model name'.format(model_name))
         def check_file_existance(filepath):
             if not os.path.exists(filepath) and not filepath == "":
                 return False
@@ -121,7 +135,7 @@ class IntentsClassifier():
             if not check_model_registry(model):
                 invalid_fields.append(model)
         emb = IntentsClassifier.get_config_element_by_name(config = config['chainer']['pipe'],name = 'embedder')
-        if not  check_file_existance(emb['load_path'][0]):
+        if not check_file_existance(emb['load_path'][0]):
             invalid_fields.append(emb['load_path'][0])
         
         if not check_file_existance(emb['load_path'][1]):
@@ -167,9 +181,8 @@ class IntentsClassifier():
         
         df_train_equalized = self.__data_equalizer.equalize_classes(df_train, samples_per_class, aug_method)
 
-        model_path = config['deeppavlov_root']+model_level+ '/'
-        if model_level == 'subs':
-            model_path += model_name + '/'
+        model_path = config['model_path']
+
         if not os.path.isdir(model_path):
             os.mkdir(model_path)
         if not os.path.isdir(model_path+'data/'):
@@ -199,21 +212,19 @@ class IntentsClassifier():
         #setting up saving and loading
         if not path_to_save_file == None:
             config['chainer']['pipe'][-1]['save_path'] = path_to_save_file+'weights.hdf5'
-            save_json(config,path_to_config)
         if not os.path.isdir(path_to_save_file) and not path_to_save_file==None:
             os.mkdir(path_to_save_file)
-            save_json(config,path_to_config)
             
         if not os.path.isdir(path_to_resulting_file) and not path_to_resulting_file == None:
             os.mkdir(path_to_resulting_file)
-            save_json(config,path_to_config)
+
         emb_config = IntentsClassifier.get_config_element_by_name(config['chainer']['pipe'],'embedder')
         cnn_config= IntentsClassifier.get_config_element_by_name(config['chainer']['pipe'],'cnn_model')
-        if not config['deeppavlov_root'] == '':
-            config['chainer']['pipe'][config['chainer']['pipe'].index(emb_config)]['load_path'][0] = config['deeppavlov_root']+config['chainer']['pipe'][config['chainer']['pipe'].index(emb_config)]['load_path'][0]
-            config['chainer']['pipe'][config['chainer']['pipe'].index(emb_config)]['load_path'][1] = config['deeppavlov_root']+config['chainer']['pipe'][config['chainer']['pipe'].index(emb_config)]['load_path'][1]
-            config['chainer']['pipe'][config['chainer']['pipe'].index(cnn_config)]['classes'] = config['deeppavlov_root']+config['chainer']['pipe'][config['chainer']['pipe'].index(cnn_config)]['classes']
-            config['dataset_reader']['data_path'] = config['deeppavlov_root']+config['dataset_reader']['data_path']
+        config['chainer']['pipe'][config['chainer']['pipe'].index(emb_config)]['load_path'][0] = os.path.abspath(model_path)+'/'+config['chainer']['pipe'][config['chainer']['pipe'].index(emb_config)]['load_path'][0]
+        config['chainer']['pipe'][config['chainer']['pipe'].index(emb_config)]['load_path'][1] = os.path.abspath(model_path)+'/'+config['chainer']['pipe'][config['chainer']['pipe'].index(emb_config)]['load_path'][1]
+        config['chainer']['pipe'][config['chainer']['pipe'].index(cnn_config)]['classes'] = os.path.abspath(model_path)+'/'+config['chainer']['pipe'][config['chainer']['pipe'].index(cnn_config)]['classes']
+        config['dataset_reader']['data_path'] = os.path.abspath(model_path)+'/'+config['dataset_reader']['data_path']
+        load_path_bckp = config['chainer']['pipe'][-1]['load_path']
         check_results = self.check_config(config)
         if len(check_results)>0:
             raise InvalidConfig(check_results,'Config file is invalid')
@@ -225,27 +236,30 @@ class IntentsClassifier():
         with open(model_path+'status.txt','w') as f:
             f.writelines(training_status)
         #fukken training
-        #train_evaluate_model_from_config(path_to_config)
+
         train_evaluate_model_from_config(config)
+        #fixing load_path
         #updating status
         training_status = 'Classification model {} {} is trained'.format(model_level, model_name)
         with open(model_path+'status.txt','w') as f:
             f.writelines(training_status)
         #getting performance
-        perf = self.get_performance(path_to_config, model_path+'df_test.csv')
-        print('f1_macro: {}'.format(perf))
-        copy(path_to_save_file+'weights.hdf5', path_to_resulting_file)
+        perf = self.get_performance(config, model_path+'df_test.csv')
+        print('f1_macro: {}'.format(perf['f1_macro']))
+        config['chainer']['pipe'][-1]['load_path'] = load_path_bckp
+        copy(os.path.abspath(path_to_save_file)+'/'+'weights.hdf5', os.path.abspath(path_to_resulting_file)+'/'+config['chainer']['pipe'][-1]['load_path'])
+        copy(os.path.abspath(path_to_save_file) + '/' + 'weights.hdf5',
+            os.path.abspath(model_path) + '/' + config['chainer']['pipe'][-1]['load_path'])
         
     def get_status(model_directory):
         with open(model_directory+'status.txt') as f:
             status = f.readlines()
         return status
         
-    def get_performance(self, path_to_config, path_to_test_data):    
+    def get_performance(self, config, path_to_test_data):
         df_test = pd.read_csv(path_to_test_data)
         if 'labels' not in df_test or 'text' not in df_test:
             raise InvalidDataFormatError('\'labels\' and \'text\' columns must be in the dataframe')
-        config = read_json(path_to_config)
         model = build_model_from_config(config)
         def eval_ipavlov(in_x):
             in_s = []
@@ -259,8 +273,25 @@ class IntentsClassifier():
         
         
     def run(self,message):
+        def prepare_config(config):
+            model_path = config['model_path']
+            emb_config = IntentsClassifier.get_config_element_by_name(config['chainer']['pipe'], 'embedder')
+            cnn_config = IntentsClassifier.get_config_element_by_name(config['chainer']['pipe'], 'cnn_model')
+            config['chainer']['pipe'][config['chainer']['pipe'].index(emb_config)]['load_path'][0] = os.path.abspath(
+                model_path) + '/' + config['chainer']['pipe'][config['chainer']['pipe'].index(emb_config)]['load_path'][
+                                                                                                         0]
+            config['chainer']['pipe'][config['chainer']['pipe'].index(emb_config)]['load_path'][1] = os.path.abspath(
+                model_path) + '/' + config['chainer']['pipe'][config['chainer']['pipe'].index(emb_config)]['load_path'][
+                                                                                                         1]
+            config['chainer']['pipe'][config['chainer']['pipe'].index(cnn_config)]['classes'] = os.path.abspath(
+                model_path) + '/' + config['chainer']['pipe'][config['chainer']['pipe'].index(cnn_config)]['classes']
+            config['dataset_reader']['data_path'] = os.path.abspath(model_path) + '/' + config['dataset_reader'][
+                'data_path']
+            config['chainer']['pipe'][-1]['load_path'] = os.path.abspath(model_path)+'/'+config['chainer']['pipe'][-1]['load_path']
+            return config
         res = {}
         root_config = read_json(self.__root_config)
+        root_config=prepare_config(root_config)
         root_model = build_model_from_config(root_config)
         root_res = self.__predict(root_model,message)
         res['root'] = root_res
@@ -269,6 +300,7 @@ class IntentsClassifier():
         for dec in root_res['decision']:
             if dec in list(self.__sub_configs.keys()):
                 sc = read_json(self.__sub_configs[dec])
+                sc = prepare_config(sc)
                 sub_model = build_model_from_config(sc)
                 res['subs'][dec] = self.__predict(sub_model,message)
         return res
