@@ -245,12 +245,11 @@ class IntentsClassifier():
         train_evaluate_model_from_config(config)
         # fixing load_path
         # updating status
-        training_status = 'Classification model {} {} is trained'.format(model_level, model_name)
+        perf = self.get_performance(config, model_path + 'df_test.csv')
+        training_status = 'Classification model {} {} is trained \nf1_score (macro avg):'.format(model_level, model_name,perf)
         with open(model_path + 'status.txt', 'w') as f:
             f.writelines(training_status)
         # getting performance
-        perf = self.get_performance(config, model_path + 'df_test.csv')
-        print('f1_macro: {}'.format(perf['f1_macro']))
         config['chainer']['pipe'][-1]['load_path'] = load_path_bckp
         copy(os.path.abspath(path_to_save_file) + '/' + 'weights.hdf5',
              os.path.abspath(path_to_resulting_file) + '/' + config['chainer']['pipe'][-1]['load_path'])
