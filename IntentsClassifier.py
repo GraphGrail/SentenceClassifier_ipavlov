@@ -40,8 +40,8 @@ class InvalidModelLevelError(Exception):
     pass
 
 class InvalidConfig(Exception):
-    def __init__(self,errors,mes):
-        save_json(errors,'config_chceck_report.json')
+    def __init__(self,errors,model_path,mes):
+        save_json(errors,model_path+'config_chceck_report.json')
 
 
 class IntentsClassifier():
@@ -232,7 +232,7 @@ class IntentsClassifier():
         load_path_bckp = config['chainer']['pipe'][-1]['load_path']
         check_results = self.check_config(config)
         if len(check_results) > 0:
-            raise InvalidConfig(check_results, 'Config file is invalid')
+            raise InvalidConfig(check_results,model_path, 'Config file is invalid')
 
         # training
         set_deeppavlov_root(config)
