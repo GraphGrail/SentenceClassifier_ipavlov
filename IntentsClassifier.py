@@ -251,10 +251,10 @@ class IntentsClassifier():
             f.writelines(training_status)
         # getting performance
         config['chainer']['pipe'][-1]['load_path'] = load_path_bckp
-        copy(os.path.abspath(path_to_save_file) + '/' + 'weights.hdf5',
-             os.path.abspath(path_to_resulting_file) + '/' + config['chainer']['pipe'][-1]['load_path'])
-        copy(os.path.abspath(path_to_save_file) + '/' + 'weights.hdf5',
-             os.path.abspath(model_path) + '/' + config['chainer']['pipe'][-1]['load_path'])
+        copy(model_path + path_to_save_file + 'weights.hdf5',
+             model_path + path_to_resulting_file + config['chainer']['pipe'][-1]['load_path'])
+        copy(model_path+path_to_save_file + 'weights.hdf5',
+             model_path + config['chainer']['pipe'][-1]['load_path'])
 
     def get_status(model_directory):
         with open(model_directory + 'status.txt') as f:
