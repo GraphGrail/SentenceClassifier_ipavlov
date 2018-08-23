@@ -217,7 +217,7 @@ class IntentsClassifier():
             pickle.dump(df_train['labels'].value_counts().index.tolist(), open(model_path + 'class_names.pkl', 'wb'))
         # setting up saving and loading
         if not path_to_save_file == None:
-            config['chainer']['pipe'][-1]['save_path'] = path_to_save_file + 'weights.hdf5'
+            config['chainer']['pipe'][-1]['save_path'] = path_to_save_file+ '/' + 'weights.hdf5'
         if not os.path.isdir(path_to_save_file) and not path_to_save_file == None:
             os.mkdir(path_to_save_file)
 
@@ -251,9 +251,9 @@ class IntentsClassifier():
             f.writelines(training_status)
         # getting performance
         config['chainer']['pipe'][-1]['load_path'] = load_path_bckp
-        copy(path_to_save_file + 'weights.hdf5',
-             path_to_resulting_file + config['chainer']['pipe'][-1]['load_path'])
-        copy(path_to_save_file+ 'weights.hdf5',
+        copy(path_to_save_file +'/'+ 'weights.hdf5',
+             path_to_resulting_file +'/'+ config['chainer']['pipe'][-1]['load_path'])
+        copy(path_to_save_file +'/'+ 'weights.hdf5',
              model_path + config['chainer']['pipe'][-1]['load_path'])
 
     def get_status(model_directory):
