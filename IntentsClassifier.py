@@ -251,9 +251,9 @@ class IntentsClassifier():
             f.writelines(training_status)
         # getting performance
         config['chainer']['pipe'][-1]['load_path'] = load_path_bckp
-        copy(path_to_save_file + 'weights.hdf5',
-             path_to_resulting_file + config['chainer']['pipe'][-1]['load_path'])
-        copy(path_to_save_file+ 'weights.hdf5',
+        copy(path_to_save_file +'/'+ 'weights.hdf5',
+             path_to_resulting_file +'/'+ config['chainer']['pipe'][-1]['load_path'])
+        copy(path_to_save_file+'/'+ 'weights.hdf5',
              model_path + config['chainer']['pipe'][-1]['load_path'])
 
     def get_status(model_directory):
