@@ -272,7 +272,7 @@ class IntentsClassifier():
             config['dataset_reader']['data_path'] = model_path + '/' + config['dataset_reader']['data_path']
             config['chainer']['pipe'][-1]['load_path'] = model_path + '/' + config['chainer']['pipe'][-1]['load_path']
             return config
-        df_test = pd.read_csv(path_to_test_data)
+        df_test = pd.read_csv(path_to_test_data).sample(100)
         if 'labels' not in df_test or 'text' not in df_test:
             raise InvalidDataFormatError('\'labels\' and \'text\' columns must be in the dataframe')
         if type(config) == str:
