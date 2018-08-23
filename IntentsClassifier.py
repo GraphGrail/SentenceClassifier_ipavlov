@@ -262,9 +262,21 @@ class IntentsClassifier():
         return status
 
     def get_performance(self, config, path_to_test_data):
+        def prepare_config(config):
+            model_path = config['model_path']
+            emb_config = IntentsClassifier.get_config_element_by_name(config['chainer']['pipe'], 'embedder')
+            cnn_config = IntentsClassifier.get_config_element_by_name(config['chainer']['pipe'], 'cnn_model')
+            config['chainer']['pipe'][config['chainer']['pipe'].index(emb_config)]['load_path'][0] = model_path + '/' + config['chainer']['pipe'][config['chainer']['pipe'].index(emb_config)]['load_path'][0]
+            config['chainer']['pipe'][config['chainer']['pipe'].index(emb_config)]['load_path'][1] = model_path + '/' + config['chainer']['pipe'][config['chainer']['pipe'].index(emb_config)]['load_path'][1]
+            config['chainer']['pipe'][config['chainer']['pipe'].index(cnn_config)]['classes'] = model_path + '/' + config['chainer']['pipe'][config['chainer']['pipe'].index(cnn_config)]['classes']
+            config['dataset_reader']['data_path'] = model_path + '/' + config['dataset_reader']['data_path']
+            config['chainer']['pipe'][-1]['load_path'] = model_path + '/' + config['chainer']['pipe'][-1]['load_path']
+            return config
         df_test = pd.read_csv(path_to_test_data)
         if 'labels' not in df_test or 'text' not in df_test:
             raise InvalidDataFormatError('\'labels\' and \'text\' columns must be in the dataframe')
+        if type(config) == str:
+            config = prepare_config(read_json(config))
         model = build_model_from_config(config)
 
         def eval_ipavlov(in_x):
