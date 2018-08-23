@@ -232,7 +232,7 @@ class IntentsClassifier():
         load_path_bckp = config['chainer']['pipe'][-1]['load_path']
         check_results = self.check_config(config)
         if len(check_results) > 0:
-            raise InvalidConfig(check_results,model_path, 'Config file is invalid')
+            raise InvalidConfig(check_results, 'Config file is invalid')
 
         # training
         set_deeppavlov_root(config)
@@ -246,14 +246,14 @@ class IntentsClassifier():
         # fixing load_path
         # updating status
         perf = self.get_performance(config, model_path + 'df_test.csv')
-        training_status = 'Classification model {} {} is trained \nf1_score (macro avg):'.format(model_level, model_name,perf)
+        training_status = 'Classification model {} {} is trained \nf1_score (macro avg): {}'.format(model_level, model_name,perf)
         with open(model_path + 'status.txt', 'w') as f:
             f.writelines(training_status)
         # getting performance
         config['chainer']['pipe'][-1]['load_path'] = load_path_bckp
-        copy(model_path + path_to_save_file + 'weights.hdf5',
-             model_path + path_to_resulting_file + config['chainer']['pipe'][-1]['load_path'])
-        copy(model_path+path_to_save_file + 'weights.hdf5',
+        copy(path_to_save_file + 'weights.hdf5',
+             path_to_resulting_file + config['chainer']['pipe'][-1]['load_path'])
+        copy(path_to_save_file+ 'weights.hdf5',
              model_path + config['chainer']['pipe'][-1]['load_path'])
 
     def get_status(model_directory):
