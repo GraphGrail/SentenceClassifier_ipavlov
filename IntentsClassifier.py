@@ -304,7 +304,7 @@ class IntentsClassifier():
             config['chainer']['pipe'][config['chainer']['pipe'].index(emb_config)]['load_path'][1] = model_path + '/' + config['chainer']['pipe'][config['chainer']['pipe'].index(emb_config)]['load_path'][1]
             config['chainer']['pipe'][config['chainer']['pipe'].index(cnn_config)]['classes'] = model_path + '/' + config['chainer']['pipe'][config['chainer']['pipe'].index(cnn_config)]['classes']
             config['dataset_reader']['data_path'] = model_path + '/' + config['dataset_reader']['data_path']
-            config['chainer']['pipe'][-1]['load_path'] = model_path + '/' + config['chainer']['pipe'][-1]['load_path']
+            config['chainer']['pipe'][-1]['load_path'] = model_path + config['chainer']['pipe'][-1]['load_path']
             config['train']['tensorboard_log_dir'] = model_path + config['train']['tensorboard_log_dir']
             return config
         df_test = pd.read_csv(path_to_test_data)
