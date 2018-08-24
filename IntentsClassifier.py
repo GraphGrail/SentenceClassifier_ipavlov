@@ -5,7 +5,6 @@ Created on Sun Jun 24 14:32:43 2018
 
 @author: lsm
 """
-
 from deeppavlov.core.commands.train import train_evaluate_model_from_config
 from deeppavlov.core.commands.utils import expand_path, set_deeppavlov_root
 from deeppavlov.core.common.file import read_json,save_json
@@ -23,12 +22,16 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import f1_score
 from deeppavlov.core.common.metrics_registry import get_metrics_by_names
 from deeppavlov.core.common.registry import get_model
-
+from os import listdir
+from os.path import isfile, join
+import tensorflow as tf
 import gc
 import os
 import pickle
 from shutil import copy
 import json
+import glob
+
 
 class InvalidDataFormatError(Exception):
     pass
