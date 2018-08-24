@@ -121,9 +121,13 @@ class IntentsClassifier():
         path_to_logs = config['train']['tensorboard_log_dir']
         if sampling == 'valid':
             list_of_files = glob.glob(path_to_logs+'valid_log/*')
+            if len(list_of_files)<1:
+                return 0
             latest_log = max(list_of_files, key=os.path.getctime)
         if sampling == 'train':
             list_of_files = glob.glob(path_to_logs+'train_log/*')
+            if len(list_of_files)<1:
+                return 0
             latest_log = max(list_of_files, key=os.path.getctime)
         for e in tf.train.summary_iterator(latest_log):
             for v in e.summary.value:
