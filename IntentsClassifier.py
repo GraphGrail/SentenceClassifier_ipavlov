@@ -57,6 +57,7 @@ class IntentsClassifier():
             config['chainer']['pipe'][config['chainer']['pipe'].index(cnn_config)]['classes'] = model_path + '/' + config['chainer']['pipe'][config['chainer']['pipe'].index(cnn_config)]['classes']
             config['dataset_reader']['data_path'] = model_path + '/' + config['dataset_reader']['data_path']
             config['chainer']['pipe'][-1]['load_path'] = model_path + '/' + config['chainer']['pipe'][-1]['load_path']
+            config['train']['tensorboard_log_dir'] = model_path + config['train']['tensorboard_log_dir']
             return config
 
         self.__root_config = root_config_path
@@ -96,6 +97,35 @@ class IntentsClassifier():
             'decision': dec,
             'confidence': np.sort(res)[0, -len(dec):].tolist()[::-1]
         }
+    @classmethod
+    def get_latest_accuracy(cls,config, sampling='valid'):
+        def prepare_config(config):
+            model_path = config['model_path']
+            emb_config = IntentsClassifier.get_config_element_by_name(config['chainer']['pipe'], 'embedder')
+            cnn_config = IntentsClassifier.get_config_element_by_name(config['chainer']['pipe'], 'cnn_model')
+            config['chainer']['pipe'][config['chainer']['pipe'].index(emb_config)]['load_path'][0] = model_path + '/' + config['chainer']['pipe'][config['chainer']['pipe'].index(emb_config)]['load_path'][0]
+            config['chainer']['pipe'][config['chainer']['pipe'].index(emb_config)]['load_path'][1] = model_path + '/' + config['chainer']['pipe'][config['chainer']['pipe'].index(emb_config)]['load_path'][1]
+            config['chainer']['pipe'][config['chainer']['pipe'].index(cnn_config)]['classes'] = model_path + '/' + config['chainer']['pipe'][config['chainer']['pipe'].index(cnn_config)]['classes']
+            config['dataset_reader']['data_path'] = model_path + '/' + config['dataset_reader']['data_path']
+            config['chainer']['pipe'][-1]['load_path'] = model_path + '/' + config['chainer']['pipe'][-1]['load_path']
+            config['train']['tensorboard_log_dir'] = model_path + config['train']['tensorboard_log_dir']
+            return config
+
+        if type(config) == str:
+            config = prepare_config(read_json(config))
+
+        res = []
+        path_to_logs = config['train']['tensorboard_log_dir']
+        if sampling == 'valid':
+            list_of_files = glob.glob(path_to_logs+'valid_log/*')
+            latest_log = max(list_of_files, key=os.path.getctime)
+        if sampling == 'train':
+            list_of_files = glob.glob(path_to_logs+'train_log/*')
+            latest_log = max(list_of_files, key=os.path.getctime)
+        for e in tf.train.summary_iterator(latest_log):
+            for v in e.summary.value:
+                res.append(v.simple_value)
+        return res[0]
 
     @classmethod
     def check_config(cls, config):
@@ -168,7 +198,7 @@ class IntentsClassifier():
               path_to_save_file=None,
               path_to_resulting_file=None):
         # preparing training/testing data
-        df_raw = pd.read_csv(path_to_data)
+        df_raw = pd.read_csv(path_to_data).sample(frac=0.1)
 
         # preparing config
         config = read_json(path_to_config)
@@ -229,10 +259,11 @@ class IntentsClassifier():
         config['chainer']['pipe'][config['chainer']['pipe'].index(emb_config)]['load_path'][1] = model_path + config['chainer']['pipe'][config['chainer']['pipe'].index(emb_config)]['load_path'][1]
         config['chainer']['pipe'][config['chainer']['pipe'].index(cnn_config)]['classes'] = model_path + config['chainer']['pipe'][config['chainer']['pipe'].index(cnn_config)]['classes']
         config['dataset_reader']['data_path'] = model_path + config['dataset_reader']['data_path']
+        config['train']['tensorboard_log_dir'] = model_path+config['train']['tensorboard_log_dir']
         load_path_bckp = config['chainer']['pipe'][-1]['load_path']
         check_results = self.check_config(config)
         if len(check_results) > 0:
-            raise InvalidConfig(check_results, 'Config file is invalid')
+            raise InvalidConfig(check_results,model_path, 'Config file is invalid')
 
         # training
         set_deeppavlov_root(config)
@@ -245,7 +276,7 @@ class IntentsClassifier():
         train_evaluate_model_from_config(config)
         # fixing load_path
         # updating status
-        perf = self.get_performance(config, model_path + 'df_test.csv')
+        perf = IntentsClassifier.get_latest_accuracy(config)#self.get_performance(config, model_path + 'df_test.csv')
         training_status = 'Classification model {} {} is trained \nf1_score (macro avg): {}'.format(model_level, model_name,perf)
         with open(model_path + 'status.txt', 'w') as f:
             f.writelines(training_status)
@@ -271,8 +302,9 @@ class IntentsClassifier():
             config['chainer']['pipe'][config['chainer']['pipe'].index(cnn_config)]['classes'] = model_path + '/' + config['chainer']['pipe'][config['chainer']['pipe'].index(cnn_config)]['classes']
             config['dataset_reader']['data_path'] = model_path + '/' + config['dataset_reader']['data_path']
             config['chainer']['pipe'][-1]['load_path'] = model_path + '/' + config['chainer']['pipe'][-1]['load_path']
+            config['train']['tensorboard_log_dir'] = model_path + config['train']['tensorboard_log_dir']
             return config
-        df_test = pd.read_csv(path_to_test_data).sample(100)
+        df_test = pd.read_csv(path_to_test_data)
         if 'labels' not in df_test or 'text' not in df_test:
             raise InvalidDataFormatError('\'labels\' and \'text\' columns must be in the dataframe')
         if type(config) == str:
@@ -299,6 +331,7 @@ class IntentsClassifier():
             config['chainer']['pipe'][config['chainer']['pipe'].index(cnn_config)]['classes'] = model_path + '/' + config['chainer']['pipe'][config['chainer']['pipe'].index(cnn_config)]['classes']
             config['dataset_reader']['data_path'] = model_path + '/' + config['dataset_reader']['data_path']
             config['chainer']['pipe'][-1]['load_path'] = model_path + '/' + config['chainer']['pipe'][-1]['load_path']
+            config['train']['tensorboard_log_dir'] = model_path + config['train']['tensorboard_log_dir']
             return config
 
         res = {}
