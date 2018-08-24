@@ -61,3 +61,7 @@ Use 'check_config' method to validate the config file for the model:
 
 
 All model's files are stored in config['model_path'] folder. Other paths contain just filenames.
+
+The model also logs its' performance with tensorboard. In order to retrieve the latest performace metric listed in the config['train']['metrics'] call get_latest_accuracy method with path to config file:
+
+	IntentsClassifier.get_latest_accuracy('../ai_models_train/42/cf_config_dual_bilstm_cnn_model.json')
