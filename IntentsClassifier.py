@@ -363,12 +363,15 @@ if __name__ == '__main__':
             'доставка': 'subs/deliver/cf_config_dual_bilstm_cnn_model.json'
             }
     ic = IntentsClassifier(root_config_path='root/cf_config_dual_bilstm_cnn_model.json',sub_configs = sub_configs)
-    ic.train('root','','df_raw.csv','root/cf_config_dual_bilstm_cnn_model.json', 
-             path_to_global_embeddings = '/home/lsm/projects/general_purpose/embeddings/fasttext/ft_native_300_ru_wiki_lenta_lemmatize.bin',
-             samples_per_class = 1500,
-             class_names = ['доставка', 'оплата', 'другое','намерение сделать заказ'],
-             path_to_save_file='temp_save/',
-             path_to_resulting_file='temp/')
+    ic.train(model_level='root',
+             model_name='',
+             path_to_data='.../ai_models_train/42/df_raw.csv',
+             path_to_config='.../ai_models_train/42/cf_config_dual_bilstm_cnn_model.json',
+             path_to_global_embeddings='.../ai_models/shared/ft_native_300_ru_wiki_lenta_lemmatize.bin',
+             samples_per_class=1500,
+             class_names=['доставка', 'оплата', 'другое', 'намерение сделать заказ'],
+             path_to_save_file='../ai_models_train/42',
+             path_to_resulting_file='../ai_models_train/42')
     mes = ''
     while mes != 'q':
         ic = IntentsClassifier(root_config_path='root/cf_config_dual_bilstm_cnn_model.json',sub_configs = sub_configs)
