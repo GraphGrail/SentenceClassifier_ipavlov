@@ -35,13 +35,23 @@
           "x"
         ],
         "out": [
-          "xn"
+          "x"
+        ]
+      },
+            {
+        "name": "stop_words_remover",
+        "id": "stop_words_remover",
+        "in": [
+          "x"
+        ],
+        "out": [
+          "x"
         ]
       },
       {
         "name": "embedder",
         "in": [
-          "xn"
+          "x"
         ],
         "out": [
           "xv"
