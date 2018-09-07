@@ -178,16 +178,16 @@ class IntentsClassifier():
             if not check_model_registry(model):
                 invalid_fields.append(model)
         emb = IntentsClassifier.get_config_element_by_name(config=config['chainer']['pipe'], name='embedder')
-        if not check_file_existance(emb['load_path'][0]):
-            invalid_fields.append(emb['load_path'][0])
+        #if not check_file_existance(emb['load_path'][0]):
+        #    invalid_fields.append(emb['load_path'][0])
 
-        if not check_file_existance(emb['load_path'][1]):
-            invalid_fields.append(emb['load_path'][1])
+        #if not check_file_existance(emb['load_path'][1]):
+        #    invalid_fields.append(emb['load_path'][1])
 
         mdl = IntentsClassifier.get_config_element_by_name(config=config['chainer']['pipe'], name='cnn_model')
 
-        if not check_file_existance(mdl['classes']):
-            invalid_fields.append(mdl['classes'])
+        #if not check_file_existance(mdl['classes']):
+        #    invalid_fields.append(mdl['classes'])
 
         invalid_metrics = []
 
@@ -205,8 +205,7 @@ class IntentsClassifier():
               path_to_save_file=None,
               path_to_resulting_file=None):
         # preparing training/testing data
-        df_raw = pd.read_csv(path_to_data).sample(frac=0.1)
-
+        df_raw = pd.read_csv(path_to_data)
         # preparing config
         config = read_json(path_to_config)
 
