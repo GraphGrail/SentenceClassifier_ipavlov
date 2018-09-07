@@ -205,8 +205,7 @@ class IntentsClassifier():
               path_to_save_file=None,
               path_to_resulting_file=None):
         # preparing training/testing data
-        df_raw = pd.read_csv(path_to_data).sample(frac=0.1)
-
+        df_raw = pd.read_csv(path_to_data)
         # preparing config
         config = read_json(path_to_config)
 
